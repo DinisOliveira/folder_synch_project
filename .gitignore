@@ -161,10 +161,3 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Ignore everything in source and replica folders
-source/*
-replica/*
-
-# But don't ignore the folders themselves or the .gitkeep files
-!source/
-!replica/
