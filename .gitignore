@@ -168,5 +168,3 @@ replica/*
 # But don't ignore the folders themselves or the .gitkeep files
 !source/
 !replica/
-!source/.gitkeep
-!replica/.gitkeep
