@@ -38,4 +38,4 @@ This Python script synchronizes two directories (source and replica), ensuring t
 python main.py [--source SOURCE] [--replica REPLICA] [--log_file LOG_FILE] [--synch_interval SYNCH_INTERVAL]
 
 ## Example
-python folder_synch.py --source "path/to/source" --replica "path/to/replica" --log_file "path/to/log_file.txt" --synch_interval "60" 
+python folder_synch.py --source "./source" --replica "./replica" --log_file "path/to/log_file.txt" --synch_interval "60" 
