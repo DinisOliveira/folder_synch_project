@@ -2,6 +2,8 @@ import os
 import hashlib
 import shutil
 import logging
+import argparse
+import time
 
 
 def calculate_hash(file_path):
@@ -9,8 +11,8 @@ def calculate_hash(file_path):
     md5 = hashlib.md5()
     with open(file_path, 'rb') as file:
         #Reading the file in chunks to not overload memory in case there are big files
-        while chunck := file.read(8192):
-            md5.update(chunck)
+        while chunk := file.read(8192):
+            md5.update(chunk)
     return md5.hexdigest()
 
 
@@ -108,22 +110,84 @@ def copy_files(source_hashes, dest_hashes, s_path, d_path):
                         logging.info(log_message)
                         print(log_message)
 
-s_pathh = r"D:\\veeam\\Task\\source"
-d_pathh = r"D:\\veeam\\Task\\replica"
+
+def remove_files(source_hashes, dest_hashes, s_path, d_path):
+    '''Remove files from replica that are not present in source'''
+    for hash, file_names in dest_hashes.items():
+                if hash not in source_hashes:
+                    #If the hash for a file/s doesn´t exist at all in source it removes all the files associated with that hash in replica:
+                    for file_name in file_names:
+                        remove_path = os.path.join(d_path, file_name)
+                        if os.path.exists(remove_path):
+                            os.remove(remove_path)
+                            log_message =f"removed {remove_path}"
+                            logging.info(log_message)
+                            print(log_message)
+
+                else:
+                    #If the hash exists in source, it removes only the files from replica that are not in source:
+                    #source_files = source_hashes[hash]
+                    for file_name in file_names:
+                        source_file_path = os.path.join(s_path, file_name)
+                        remove_path = os.path.join(d_path, file_name)
+                        if not os.path.exists(source_file_path):
+                            if os.path.exists(remove_path):
+                                os.remove(remove_path)
+                                log_message= f"removed {remove_path}"
+                                logging.info(log_message)
+                                print(log_message)
 
 
-source_hashes = {}
-source_sub_hashes = {}
-s_sub_dir_files ={}
-dest_hashes = {}
-dest_sub_hashes = {}
-d_sub_dir_files = {}
+def synch_directories(source, replica):
 
-dict_hashes(s_pathh, source_hashes, source_sub_hashes)
-dict_hashes(d_pathh, dest_hashes, dest_sub_hashes)
-ls_dir(s_pathh, s_sub_dir_files)
-ls_dir(d_pathh, d_sub_dir_files)
-create_remove_sub_folders(s_sub_dir_files, d_sub_dir_files, s_pathh, d_pathh)
-copy_files(source_hashes, dest_hashes, s_pathh, d_pathh)
-copy_files(source_sub_hashes, dest_sub_hashes, s_pathh, d_pathh)
 
+    #logging.info(f"Started: saving logs in {log_file}")
+
+    if not os.path.exists(replica):
+        os.makedirs(replica)
+        logging.info(f"Created {replica}")
+    
+    if not os.path.exists(source):
+        raise argparse.ArgumentError(None, "The source directory doesn't exist")
+
+    source_hashes = {}
+    source_sub_hashes = {}
+    replica_hashes = {}
+    replica_sub_hashes = {}
+    s_sub_dir_files ={}
+    r_sub_dir_files = {}
+
+    dict_hashes(source, source_hashes, source_sub_hashes)
+    dict_hashes(replica, replica_hashes, replica_sub_hashes)
+    ls_dir(source, s_sub_dir_files)
+    ls_dir(replica, r_sub_dir_files)
+
+    create_remove_sub_folders(s_sub_dir_files, r_sub_dir_files, source, replica)
+    copy_files(source_hashes, replica_hashes, source, replica)
+    copy_files(source_sub_hashes, replica_sub_hashes, source, replica)
+    remove_files(source_hashes, replica_hashes, source, replica)
+    remove_files(source_sub_hashes, replica_sub_hashes, source, replica)
+
+
+def main():
+    parser = argparse.ArgumentParser(description= "Program to synch two directories, to stop it manually use keyboard interrupt 'CTRL+C':")
+    parser.add_argument("--source", type=str, required=True, default="source", help="Replace SOURCE with the path to Source")
+    parser.add_argument("--replica", type=str, required=True, default="replica", help="Replace REPLICA with the path to Replica")
+    parser.add_argument("--log_file", type=str, required=True, default="log_file.txt", help="Replace LOG_FILE_PATH with Path to the Log File")
+    parser.add_argument("--synch_interval", type=int, required=True, default=60, help="Replace SYNCH_INTERVAL with the time interval for synching in seconds")
+    args = parser.parse_args()
+    logging.basicConfig(filename=args.log_file,format='%(asctime)s %(message)s',filemode='w', level=logging.INFO)
+    logging.info(f"Started: saving logs in {args.log_file}")
+
+    while True:
+        try:
+            synch_directories(args.source, args.replica)
+            time.sleep(args.synch_interval)
+
+        except KeyboardInterrupt:
+            print("Program stopped by the user")
+            raise SystemExit
+
+
+if __name__ == "__main__":
+    main()
